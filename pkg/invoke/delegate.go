@@ -44,6 +44,13 @@ func delegateCommon(expectedCommand, delegatePlugin string, exec Exec) (string, 
 // DelegateAdd calls the given delegate plugin with the CNI ADD action and
 // JSON configuration
 func DelegateAdd(ctx context.Context, delegatePlugin string, netconf []byte, exec Exec) (types.Result, error) {
+	cmd := os.Getenv("CNI_COMMAND")
+	if cmd == "" {
+		return fmt.Errorf("environment variable CNI_COMMAND must be specified.")
+	}
+	// restore CNI_COMMAND to original value upon return.
+	defer os.Setenv("CNI_COMMAND", cmd)
+	os.Setenv("CNI_COMMAND", "ADD")
 	pluginPath, realExec, err := delegateCommon("ADD", delegatePlugin, exec)
 	if err != nil {
 		return nil, err
@@ -55,6 +62,13 @@ func DelegateAdd(ctx context.Context, delegatePlugin string, netconf []byte, exe
 // DelegateCheck calls the given delegate plugin with the CNI CHECK action and
 // JSON configuration
 func DelegateCheck(ctx context.Context, delegatePlugin string, netconf []byte, exec Exec) error {
+	cmd := os.Getenv("CNI_COMMAND")
+	if cmd == "" {
+		return fmt.Errorf("environment variable CNI_COMMAND must be specified.")
+	}
+	// restore CNI_COMMAND to original value upon return.
+	defer os.Setenv("CNI_COMMAND", cmd)
+	os.Setenv("CNI_COMMAND", "CHECK")
 	pluginPath, realExec, err := delegateCommon("CHECK", delegatePlugin, exec)
 	if err != nil {
 		return err
@@ -66,6 +80,13 @@ func DelegateCheck(ctx context.Context, delegatePlugin string, netconf []byte, e
 // DelegateDel calls the given delegate plugin with the CNI DEL action and
 // JSON configuration
 func DelegateDel(ctx context.Context, delegatePlugin string, netconf []byte, exec Exec) error {
+	cmd := os.Getenv("CNI_COMMAND")
+	if cmd == "" {
+		return fmt.Errorf("environment variable CNI_COMMAND must be specified.")
+	}
+	// restore CNI_COMMAND to original value upon return.
+	defer os.Setenv("CNI_COMMAND", cmd)
+	os.Setenv("CNI_COMMAND", "DEL")
 	pluginPath, realExec, err := delegateCommon("DEL", delegatePlugin, exec)
 	if err != nil {
 		return err
