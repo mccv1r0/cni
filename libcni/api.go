@@ -232,13 +232,13 @@ func getCachedResult(netName, cniVersion string, rt *RuntimeConf) (types.Result,
 }
 
 // GetNetworkListCachedResult returns the cached Result of the previous
-// previous AddNetworkList() operation for a network list, or an error.
+// AddNetworkList() operation for a network list, or an error.
 func (c *CNIConfig) GetNetworkListCachedResult(list *NetworkConfigList, rt *RuntimeConf) (types.Result, error) {
 	return getCachedResult(list.Name, list.CNIVersion, rt)
 }
 
 // GetNetworkCachedResult returns the cached Result of the previous
-// previous AddNetwork() operation for a network, or an error.
+// AddNetwork() operation for a network, or an error.
 func (c *CNIConfig) GetNetworkCachedResult(net *NetworkConfig, rt *RuntimeConf) (types.Result, error) {
 	return getCachedResult(net.Network.Name, net.Network.CNIVersion, rt)
 }
@@ -325,13 +325,13 @@ func getCachedConfig(netName string, rt *RuntimeConf) ([]byte, *RuntimeConf, err
 }
 
 // GetNetworkListCachedConfig returns the cached Config of the previous
-// previous AddNetworkList() operation for a network list, or an error.
+// AddNetworkList() operation for a network list, or an error.
 func (c *CNIConfig) GetNetworkListCachedConfig(list *NetworkConfigList, rt *RuntimeConf) ([]byte, *RuntimeConf, error) {
 	return getCachedConfig(list.Name, rt)
 }
 
 // GetNetworkCachedConfig returns the cached Config of the previous
-// previous AddNetwork() operation for a network, or an error.
+// AddNetwork() operation for a network, or an error.
 func (c *CNIConfig) GetNetworkCachedConfig(net *NetworkConfig, rt *RuntimeConf) ([]byte, *RuntimeConf, error) {
 	return getCachedConfig(net.Network.Name, rt)
 }
