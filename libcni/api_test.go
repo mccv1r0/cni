@@ -24,6 +24,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -122,11 +123,13 @@ func newPluginInfo(configValue, prevResult string, injectDebugFilePath bool, res
 }
 
 func resultCacheFilePath(cacheDirPath, netName string, rt *libcni.RuntimeConf) string {
-	return filepath.Join(cacheDirPath, "results", netName+"-"+rt.ContainerID+"-"+rt.IfName)
+	fName := fmt.Sprintf(netName + "-" + rt.ContainerID + "-" + rt.IfName)
+	return filepath.Join(cacheDirPath, "results", fmt.Sprintf("%q", fName))
 }
 
 func configCacheFilePath(cacheDirPath, netName string, rt *libcni.RuntimeConf) string {
-	return filepath.Join(cacheDirPath, "config", netName+"-"+rt.ContainerID+"-"+rt.IfName)
+	fName := fmt.Sprintf(netName + "-" + rt.ContainerID + "-" + rt.IfName)
+	return filepath.Join(cacheDirPath, "config", fmt.Sprintf("%q", fName))
 }
 
 var _ = Describe("Invoking plugins", func() {
@@ -1598,10 +1601,11 @@ var _ = Describe("Invoking plugins", func() {
 			for _, f := range files {
 				data, err := ioutil.ReadFile(filepath.Join(resultsDir, f.Name()))
 				Expect(err).NotTo(HaveOccurred())
-				if strings.HasSuffix(f.Name(), firstIfname) {
+				fName, _ := strconv.Unquote(f.Name())
+				if strings.HasSuffix(fName, firstIfname) {
 					foundFirst = true
 					Expect(strings.Contains(string(data), firstIP)).To(BeTrue())
-				} else if strings.HasSuffix(f.Name(), secondIfname) {
+				} else if strings.HasSuffix(fName, secondIfname) {
 					foundSecond = true
 					Expect(strings.Contains(string(data), secondIP)).To(BeTrue())
 				}
@@ -1630,23 +1634,30 @@ var _ = Describe("Invoking plugins", func() {
 			var foundFirst, foundSecond bool
 			for _, f := range files {
 				type cachedConfig struct {
+					CniVersion     string                 `json:"cniVersion"`
 					Config         []byte                 `json:"config"`
 					CniArgs        string                 `json:"cniArgs,omitempty"`
 					CapabilityArgs map[string]interface{} `json:"capabilityArgs,omitempty"`
 				}
+				type cniCachedFile struct {
+					Kind         string       `json:"kind"`
+					CachedConfig cachedConfig `json:"cachedConfig"`
+				}
 
 				data, err := ioutil.ReadFile(filepath.Join(configDir, f.Name()))
 				Expect(err).NotTo(HaveOccurred())
-
-				cc := &cachedConfig{}
-				err = json.Unmarshal(data, cc)
+				cf := &cniCachedFile{}
+				err = json.Unmarshal(data, cf)
 				Expect(err).NotTo(HaveOccurred())
+				Expect(cf.Kind).To(Equal("cniCacheV1"))
+				cc := cf.CachedConfig
 				// Both cache files should be exactly the same as the
 				// interface name is not part of the config cache
 				Expect(strings.Contains(string(cc.Config), "cachetest")).To(BeTrue())
-				if strings.HasSuffix(f.Name(), firstIfname) {
+				fName, _ := strconv.Unquote(f.Name())
+				if strings.HasSuffix(fName, firstIfname) {
 					foundFirst = true
-				} else if strings.HasSuffix(f.Name(), secondIfname) {
+				} else if strings.HasSuffix(fName, secondIfname) {
 					foundSecond = true
 				}
 			}
