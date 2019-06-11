@@ -179,7 +179,8 @@ func getCacheFilePath(fileType cacheFileType, netName string, rt *RuntimeConf) s
 	if cacheDir == "" {
 		cacheDir = CacheDir
 	}
-	return filepath.Join(cacheDir, string(fileType), fmt.Sprintf("%s-%s-%s", netName, rt.ContainerID, rt.IfName))
+	fName := fmt.Sprintf("%s-%s-%s", netName, rt.ContainerID, rt.IfName)
+	return filepath.Join(cacheDir, string(fileType), fmt.Sprintf("%q", fName))
 }
 
 func setCachedResult(result types.Result, netName string, rt *RuntimeConf) error {
@@ -267,7 +268,13 @@ func parseArgs(args string) ([][2]string, error) {
 	return result, nil
 }
 
+type cniCachedFile struct {
+	Kind         string       `json:"kind"`
+	CachedConfig cachedConfig `json:"cachedConfig"`
+}
+
 type cachedConfig struct {
+	CniVersion     string                 `json:"cniVersion"`
 	Config         []byte                 `json:"config"`
 	CniArgs        string                 `json:"cniArgs,omitempty"`
 	CapabilityArgs map[string]interface{} `json:"capabilityArgs,omitempty"`
@@ -279,15 +286,18 @@ func setCachedConfig(config []byte, netName string, rt *RuntimeConf) error {
 		return err
 	}
 
-	cached := cachedConfig{Config: config}
+	cached := cachedConfig{Config: config,
+		CniVersion: "0.4.0"}
 	if len(rt.Args) > 0 {
 		cached.CniArgs = stringifyArgs(rt.Args)
 	}
 	if len(rt.CapabilityArgs) > 0 {
 		cached.CapabilityArgs = rt.CapabilityArgs
 	}
+	kind := cniCachedFile{Kind: "cniCacheV1",
+		CachedConfig: cached}
 
-	newBytes, err := json.Marshal(&cached)
+	newBytes, err := json.Marshal(&kind)
 	if err != nil {
 		return err
 	}
@@ -308,20 +318,24 @@ func getCachedConfig(netName string, rt *RuntimeConf) ([]byte, *RuntimeConf, err
 		return nil, nil, nil
 	}
 
-	unmarshaled := cachedConfig{}
+	unmarshaled := cniCachedFile{}
 	if err := json.Unmarshal(bytes, &unmarshaled); err != nil {
 		return nil, nil, fmt.Errorf("failed to unmarshal cached network %q config: %v", netName, err)
 	}
+	if unmarshaled.Kind != "cniCacheV1" {
+		return nil, nil, fmt.Errorf("read cached network %q config has wrong kind: %v", netName, unmarshaled.Kind)
+	}
+	cached := unmarshaled.CachedConfig
 
 	newRt := &RuntimeConf{}
-	if unmarshaled.CniArgs != "" {
-		if newRt.Args, err = parseArgs(unmarshaled.CniArgs); err != nil {
-			return nil, nil, fmt.Errorf("failed to parse cached config CNI Args %q: %v", unmarshaled.CniArgs, err)
+	if cached.CniArgs != "" {
+		if newRt.Args, err = parseArgs(cached.CniArgs); err != nil {
+			return nil, nil, fmt.Errorf("failed to parse cached config CNI Args %q: %v", cached.CniArgs, err)
 		}
 	}
-	newRt.CapabilityArgs = unmarshaled.CapabilityArgs
+	newRt.CapabilityArgs = cached.CapabilityArgs
 
-	return unmarshaled.Config, newRt, nil
+	return cached.Config, newRt, nil
 }
 
 // GetNetworkListCachedConfig returns the cached Config of the previous
